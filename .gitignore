@@ -1,0 +1,5 @@
+node_modules/
+*.log
+.DS_Store
+*.tsbuildinfo
+# NOTE: dist/ is intentionally committed — git-URL consumers install it directly (no build step).
