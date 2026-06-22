@@ -2,7 +2,7 @@
 // mirrors its `state` into React state via subscribe(); all logic stays in the engine. Drop-in for the
 // apps' old src/context/AuthContext.tsx — same `useAuth()` shape, same SSO_BLOCKED_KEY export.
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { AuthClient, SSO_BLOCKED_KEY, type AuthState, type AuthUser } from './client.js';
+import { AuthClient, type AuthState, type AuthUser } from './client.js';
 
 export interface AuthContextValue {
   user: AuthUser | null;
@@ -19,7 +19,6 @@ export interface AuthContextValue {
   register: (email: string, password: string) => Promise<void>;
   loginWithSSO: () => Promise<void>;
   completeSsoCallback: () => Promise<void>;
-  resendVerification: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -49,7 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register: client.register,
     loginWithSSO: client.loginWithSSO,
     completeSsoCallback: client.completeSsoCallback,
-    resendVerification: client.resendVerification,
     logout: client.logout,
   };
 
@@ -62,9 +60,7 @@ export function useAuth(): AuthContextValue {
   return ctx;
 }
 
-export { SSO_BLOCKED_KEY };
-
 // The standardized screen lives in its own module; re-export here so consumers get it from
 // `@bearsoft/auth-core/react`. (Declared after AuthProvider/useAuth so the cycle resolves cleanly.)
 export { AuthScreen } from './AuthScreen.js';
-export type { AuthScreenProps, AuthScreenCopy } from './AuthScreen.js';
+export type { AuthScreenProps } from './AuthScreen.js';

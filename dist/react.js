@@ -3,7 +3,7 @@ import { jsx as _jsx } from "react/jsx-runtime";
 // mirrors its `state` into React state via subscribe(); all logic stays in the engine. Drop-in for the
 // apps' old src/context/AuthContext.tsx — same `useAuth()` shape, same SSO_BLOCKED_KEY export.
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { AuthClient, SSO_BLOCKED_KEY } from './client.js';
+import { AuthClient } from './client.js';
 const AuthContext = createContext(undefined);
 export function AuthProvider({ children }) {
     const ref = useRef(null);
@@ -28,7 +28,6 @@ export function AuthProvider({ children }) {
         register: client.register,
         loginWithSSO: client.loginWithSSO,
         completeSsoCallback: client.completeSsoCallback,
-        resendVerification: client.resendVerification,
         logout: client.logout,
     };
     return _jsx(AuthContext.Provider, { value: value, children: children });
@@ -39,7 +38,6 @@ export function useAuth() {
         throw new Error('useAuth must be used within AuthProvider');
     return ctx;
 }
-export { SSO_BLOCKED_KEY };
 // The standardized screen lives in its own module; re-export here so consumers get it from
 // `@bearsoft/auth-core/react`. (Declared after AuthProvider/useAuth so the cycle resolves cleanly.)
 export { AuthScreen } from './AuthScreen.js';

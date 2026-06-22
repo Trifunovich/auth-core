@@ -11,7 +11,7 @@ vi.mock('./config.js', () => ({
   getUserManager: vi.fn(async () => h.manager),
 }));
 
-import { AuthClient, SSO_BLOCKED_KEY, SSO_PENDING_KEY } from './client.js';
+import { AuthClient } from './client.js';
 
 const okJson = (body: unknown, status = 200) =>
   ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
@@ -65,37 +65,20 @@ describe('AuthClient', () => {
     await expect(new AuthClient().login('a', 'b')).rejects.toThrow('nope');
   });
 
-  it('completeSsoCallback() HOLDS on email_unverified and stashes the pending token', async () => {
-    h.manager.signinRedirectCallback = vi.fn(async () => ({ access_token: 'AT', profile: { sub: 'sub123' } }));
-    vi.stubGlobal('fetch', vi.fn(async () => okJson({ error: 'email_unverified', message: 'verify pls' }, 403)));
-    const c = new AuthClient();
-    await expect(c.completeSsoCallback()).rejects.toThrow('email_unverified');
-    expect(localStorage.getItem(SSO_BLOCKED_KEY)).toBe('verify pls');
-    expect(JSON.parse(localStorage.getItem(SSO_PENDING_KEY)!)).toEqual({ token: 'AT', sub: 'sub123' });
-    expect(localStorage.getItem('token')).toBeNull();
-  });
-
   it('completeSsoCallback() maps the session via /api/auth/me on success', async () => {
     h.manager.signinRedirectCallback = vi.fn(async () => ({ access_token: 'AT', profile: { sub: 'sub123' } }));
     vi.stubGlobal('fetch', vi.fn(async () => okJson({ userId: 'guid-1', email: 'me@x.y' })));
     const c = new AuthClient();
     await c.completeSsoCallback();
     expect(c.state.user).toEqual({ id: 'guid-1', email: 'me@x.y' });
-    expect(localStorage.getItem(SSO_BLOCKED_KEY)).toBeNull();
+    expect(localStorage.getItem('token')).toBe('AT');
   });
 
-  it('resendVerification() POSTs the held token to the backend', async () => {
-    localStorage.setItem(SSO_PENDING_KEY, JSON.stringify({ token: 'HELD', sub: 's' }));
-    const fetchMock = vi.fn(async () => okJson({ message: 'sent' }));
-    vi.stubGlobal('fetch', fetchMock);
-    await new AuthClient().resendVerification();
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/auth/resend-verification',
-      expect.objectContaining({ method: 'POST', headers: { Authorization: 'Bearer HELD' } }),
-    );
-  });
-
-  it('resendVerification() errors when there is no pending session', async () => {
-    await expect(new AuthClient().resendVerification()).rejects.toThrow(/session expired/i);
+  it('completeSsoCallback() clears the token and throws when /api/auth/me fails', async () => {
+    h.manager.signinRedirectCallback = vi.fn(async () => ({ access_token: 'AT', profile: { sub: 'sub123' } }));
+    vi.stubGlobal('fetch', vi.fn(async () => okJson({ error: 'nope' }, 500)));
+    const c = new AuthClient();
+    await expect(c.completeSsoCallback()).rejects.toThrow('nope');
+    expect(localStorage.getItem('token')).toBeNull();
   });
 });

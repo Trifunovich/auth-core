@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { SSO_BLOCKED_KEY, type AuthUser } from './client.js';
+import { type AuthUser } from './client.js';
 export interface AuthContextValue {
     user: AuthUser | null;
     token: string | null;
@@ -15,14 +15,12 @@ export interface AuthContextValue {
     register: (email: string, password: string) => Promise<void>;
     loginWithSSO: () => Promise<void>;
     completeSsoCallback: () => Promise<void>;
-    resendVerification: () => Promise<void>;
     logout: () => Promise<void>;
 }
 export declare function AuthProvider({ children }: {
     children: ReactNode;
 }): import("react").JSX.Element;
 export declare function useAuth(): AuthContextValue;
-export { SSO_BLOCKED_KEY };
 export { AuthScreen } from './AuthScreen.js';
-export type { AuthScreenProps, AuthScreenCopy } from './AuthScreen.js';
+export type { AuthScreenProps } from './AuthScreen.js';
 //# sourceMappingURL=react.d.ts.map

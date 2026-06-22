@@ -1,26 +1,22 @@
 /*
- * Shared auth-screen styles for @bearsoft/auth-core. Structure + layout live here; colors come from
- * CSS custom properties so an app themes it by setting --auth-* (palette) and passing a logo. Used by
- * BOTH the React and the Angular screen — markup differs per framework, this stylesheet does not.
+ * Shared auth-screen styles for @bearsoft/auth-core. Post-Keycloak the app screen is only a transient
+ * "Signing you in…" spinner (CrimsonRaven hosts the real, themed login UI) or the legacy break-glass
+ * form — so this is a small centered card, not a full branded layout. Colors come from CSS custom
+ * properties; an app themes it by setting --auth-* on :root or a wrapper.
  *
  * Theme contract (override on :root or a wrapper):
- *   --auth-brand        brand-panel background        (default: indigo)
- *   --auth-brand-fg     text on the brand panel
  *   --auth-accent       primary button background
  *   --auth-accent-fg    primary button text
- *   --auth-bg           form-side background
- *   --auth-fg           form-side text
+ *   --auth-bg           background
+ *   --auth-fg           text
  *   --auth-muted        secondary text / notes
  *   --auth-border       input/borders
  *   --auth-error        error text
- *   --auth-ok           success text
  *   --auth-radius       corner radius
  */
 /* Var DEFAULTS go in :where() (zero specificity) so an app's own `.bsa-screen { --auth-*: ... }`
- * always wins regardless of stylesheet load order — themes inject just these vars + a logo. */
+ * always wins regardless of stylesheet load order. */
 :where(.bsa-screen) {
-  --auth-brand: #4f46e5;
-  --auth-brand-fg: #ffffff;
   --auth-accent: #4f46e5;
   --auth-accent-fg: #ffffff;
   --auth-bg: #ffffff;
@@ -28,50 +24,26 @@
   --auth-muted: #6b7280;
   --auth-border: #d1d5db;
   --auth-error: #dc2626;
-  --auth-ok: #059669;
   --auth-radius: 12px;
 }
 
 .bsa-screen {
   display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   min-height: 100vh;
   width: 100%;
+  padding: 2rem 1.5rem;
   font-family: inherit;
   color: var(--auth-fg);
   background: var(--auth-bg);
 }
 
-/* Brand panel (left). Collapses away on narrow screens. */
-.bsa-brand {
-  flex: 0 0 40%;
-  max-width: 460px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-  padding: 3rem 2rem;
-  text-align: center;
-  background: var(--auth-brand);
-  color: var(--auth-brand-fg);
-}
-.bsa-brand img { max-width: 120px; max-height: 120px; object-fit: contain; }
-.bsa-brand h1 { margin: 0; font-size: 1.6rem; font-weight: 700; }
-.bsa-brand p { margin: 0; opacity: 0.85; font-size: 0.95rem; }
-
-/* Action side (right). */
-.bsa-main {
-  flex: 1 1 60%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 3rem 1.5rem;
-}
-.bsa-card { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 0.85rem; }
+.bsa-card { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 0.85rem; text-align: center; }
 .bsa-card h2 { margin: 0 0 0.25rem; font-size: 1.3rem; font-weight: 600; }
-.bsa-sub { margin: 0 0 0.5rem; color: var(--auth-muted); font-size: 0.95rem; }
-.bsa-form { display: flex; flex-direction: column; gap: 0.85rem; }
+.bsa-sub { margin: 0; color: var(--auth-muted); font-size: 0.95rem; }
+.bsa-form { display: flex; flex-direction: column; gap: 0.85rem; text-align: left; }
 
 .bsa-btn {
   appearance: none;
@@ -85,7 +57,6 @@
   color: var(--auth-accent-fg);
 }
 .bsa-btn:disabled { opacity: 0.6; cursor: default; }
-.bsa-btn--ghost { background: transparent; color: var(--auth-accent); border: 1px solid var(--auth-border); }
 
 .bsa-link {
   appearance: none;
@@ -97,7 +68,6 @@
   cursor: pointer;
   text-decoration: underline;
 }
-.bsa-links { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.25rem; font-size: 0.9rem; }
 
 .bsa-field { display: flex; flex-direction: column; gap: 0.3rem; }
 .bsa-field label { font-size: 0.85rem; color: var(--auth-muted); }
@@ -110,18 +80,4 @@
   color: var(--auth-fg);
 }
 
-.bsa-note {
-  padding: 0.6rem 0.75rem;
-  border-radius: var(--auth-radius);
-  background: color-mix(in srgb, var(--auth-muted) 12%, transparent);
-  color: var(--auth-fg);
-  font-size: 0.88rem;
-}
 .bsa-error { color: var(--auth-error); font-size: 0.88rem; }
-.bsa-ok { color: var(--auth-ok); font-size: 0.88rem; }
-
-@media (max-width: 720px) {
-  .bsa-screen { flex-direction: column; }
-  .bsa-brand { flex-basis: auto; max-width: none; padding: 2rem 1.5rem; }
-  .bsa-brand img { max-width: 80px; max-height: 80px; }
-}
