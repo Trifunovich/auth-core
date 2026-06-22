@@ -1,7 +1,7 @@
 // Framework-agnostic auth engine. All the SSO state-machine logic lives here; the React and Angular
 // adapters only mirror `state` into their reactivity primitives. Ported verbatim from the apps'
 // AuthContext.tsx so every consumer behaves identically.
-import { getUserManager, loadRuntimeConfig } from './config';
+import { getUserManager, loadRuntimeConfig } from './config.js';
 
 /** Set when an SSO sign-in is held by the backend (unverified email matching an existing account).
  *  Its presence tells the login screen to stop auto-redirecting to the IdP and offer a way out

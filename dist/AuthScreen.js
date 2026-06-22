@@ -4,8 +4,8 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 // app injects its own (the `legacy` slot) — or gets a minimal built-in. Theme via CSS custom properties
 // (import '@bearsoft/auth-core/auth.css' and set --auth-*); pass the app's logo + copy.
 import { useState } from 'react';
-import { useAuth } from './react';
-import { SSO_BLOCKED_KEY } from './client';
+import { useAuth } from './react.js';
+import { SSO_BLOCKED_KEY } from './client.js';
 function message(e) {
     return e instanceof Error ? e.message : 'Something went wrong.';
 }

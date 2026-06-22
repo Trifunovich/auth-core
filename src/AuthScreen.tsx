@@ -3,8 +3,8 @@
 // app injects its own (the `legacy` slot) — or gets a minimal built-in. Theme via CSS custom properties
 // (import '@bearsoft/auth-core/auth.css' and set --auth-*); pass the app's logo + copy.
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { useAuth } from './react';
-import { SSO_BLOCKED_KEY } from './client';
+import { useAuth } from './react.js';
+import { SSO_BLOCKED_KEY } from './client.js';
 
 export interface AuthScreenCopy {
   /** Brand-panel title, e.g. "Rosella Rhythm". */

@@ -1,6 +1,6 @@
 {
   "name": "@bearsoft/auth-core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Framework-agnostic CrimsonRaven SSO engine (oidc-client-ts) with React + Angular adapters.",
   "license": "MIT",
   "type": "module",

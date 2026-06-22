@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { SSO_BLOCKED_KEY, type AuthUser } from './client';
+import { SSO_BLOCKED_KEY, type AuthUser } from './client.js';
 export interface AuthContextValue {
     user: AuthUser | null;
     token: string | null;
@@ -23,6 +23,6 @@ export declare function AuthProvider({ children }: {
 }): import("react").JSX.Element;
 export declare function useAuth(): AuthContextValue;
 export { SSO_BLOCKED_KEY };
-export { AuthScreen } from './AuthScreen';
-export type { AuthScreenProps, AuthScreenCopy } from './AuthScreen';
+export { AuthScreen } from './AuthScreen.js';
+export type { AuthScreenProps, AuthScreenCopy } from './AuthScreen.js';
 //# sourceMappingURL=react.d.ts.map

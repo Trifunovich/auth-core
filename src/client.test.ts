@@ -6,12 +6,12 @@ const h = vi.hoisted(() => ({
   cfg: { oidcEnabled: true, oidcOnline: true, oidcAuthority: 'https://cr', oidcClientId: 'c' } as Record<string, unknown>,
 }));
 
-vi.mock('./config', () => ({
+vi.mock('./config.js', () => ({
   loadRuntimeConfig: vi.fn(async () => h.cfg),
   getUserManager: vi.fn(async () => h.manager),
 }));
 
-import { AuthClient, SSO_BLOCKED_KEY, SSO_PENDING_KEY } from './client';
+import { AuthClient, SSO_BLOCKED_KEY, SSO_PENDING_KEY } from './client.js';
 
 const okJson = (body: unknown, status = 200) =>
   ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
