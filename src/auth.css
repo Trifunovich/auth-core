@@ -16,7 +16,9 @@
  *   --auth-ok           success text
  *   --auth-radius       corner radius
  */
-.bsa-screen {
+/* Var DEFAULTS go in :where() (zero specificity) so an app's own `.bsa-screen { --auth-*: ... }`
+ * always wins regardless of stylesheet load order — themes inject just these vars + a logo. */
+:where(.bsa-screen) {
   --auth-brand: #4f46e5;
   --auth-brand-fg: #ffffff;
   --auth-accent: #4f46e5;
@@ -28,7 +30,9 @@
   --auth-error: #dc2626;
   --auth-ok: #059669;
   --auth-radius: 12px;
+}
 
+.bsa-screen {
   display: flex;
   min-height: 100vh;
   width: 100%;

@@ -3,7 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 // unverified-email "verify your email" card. The legacy email/password form is maintenance-only, so the
 // app injects its own (the `legacy` slot) — or gets a minimal built-in. Theme via CSS custom properties
 // (import '@bearsoft/auth-core/auth.css' and set --auth-*); pass the app's logo + copy.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from './react.js';
 import { SSO_BLOCKED_KEY } from './client.js';
 function message(e) {
@@ -46,6 +46,13 @@ export function AuthScreen({ copy, legacy }) {
             setBusy(false);
         }
     };
+    // CR mode (not held): bounce straight to CrimsonRaven — no manual "Sign in" gate. The `blocked`
+    // guard keeps a held (unverified) login from re-looping into the IdP.
+    useEffect(() => {
+        if (!authReady || legacyMode || blocked)
+            return;
+        loginWithSSO().catch((e) => setError(message(e)));
+    }, [authReady, legacyMode, blocked, loginWithSSO]);
     function body() {
         if (!authReady)
             return _jsx("p", { className: "bsa-sub", children: "Loading\u2026" });
@@ -61,8 +68,9 @@ export function AuthScreen({ copy, legacy }) {
         }
         if (blocked && showLegacy)
             return legacy ?? _jsx(BasicSignIn, {});
-        // CR mode, not held: the brand sign-in.
-        return (_jsxs(_Fragment, { children: [_jsx("h2", { children: "Welcome back" }), _jsx("p", { className: "bsa-sub", children: "Sign in to continue." }), error && _jsx("div", { className: "bsa-error", children: error }), _jsx("button", { className: "bsa-btn", onClick: startSso, children: "Sign in" })] }));
+        // CR mode, not held: auto-redirecting to CrimsonRaven (see the effect above). Show progress; a
+        // manual retry appears only if the redirect failed.
+        return error ? (_jsxs(_Fragment, { children: [_jsx("div", { className: "bsa-error", children: error }), _jsx("button", { className: "bsa-btn", onClick: startSso, children: "Try again" })] })) : (_jsx("p", { className: "bsa-sub", children: "Signing you in\u2026" }));
     }
     return (_jsxs("div", { className: "bsa-screen", children: [_jsxs("aside", { className: "bsa-brand", children: [copy.logoUrl && _jsx("img", { src: copy.logoUrl, alt: copy.appName }), _jsx("h1", { children: copy.appName }), copy.tagline && _jsx("p", { children: copy.tagline })] }), _jsx("main", { className: "bsa-main", children: _jsx("div", { className: "bsa-card", children: body() }) })] }));
 }

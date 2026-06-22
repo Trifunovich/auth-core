@@ -2,7 +2,7 @@
 // unverified-email "verify your email" card. The legacy email/password form is maintenance-only, so the
 // app injects its own (the `legacy` slot) — or gets a minimal built-in. Theme via CSS custom properties
 // (import '@bearsoft/auth-core/auth.css' and set --auth-*); pass the app's logo + copy.
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useAuth } from './react.js';
 import { SSO_BLOCKED_KEY } from './client.js';
 
@@ -66,6 +66,13 @@ export function AuthScreen({ copy, legacy }: AuthScreenProps) {
     }
   };
 
+  // CR mode (not held): bounce straight to CrimsonRaven — no manual "Sign in" gate. The `blocked`
+  // guard keeps a held (unverified) login from re-looping into the IdP.
+  useEffect(() => {
+    if (!authReady || legacyMode || blocked) return;
+    loginWithSSO().catch((e) => setError(message(e)));
+  }, [authReady, legacyMode, blocked, loginWithSSO]);
+
   function body(): ReactNode {
     if (!authReady) return <p className="bsa-sub">Loading…</p>;
 
@@ -108,16 +115,17 @@ export function AuthScreen({ copy, legacy }: AuthScreenProps) {
 
     if (blocked && showLegacy) return legacy ?? <BasicSignIn />;
 
-    // CR mode, not held: the brand sign-in.
-    return (
+    // CR mode, not held: auto-redirecting to CrimsonRaven (see the effect above). Show progress; a
+    // manual retry appears only if the redirect failed.
+    return error ? (
       <>
-        <h2>Welcome back</h2>
-        <p className="bsa-sub">Sign in to continue.</p>
-        {error && <div className="bsa-error">{error}</div>}
+        <div className="bsa-error">{error}</div>
         <button className="bsa-btn" onClick={startSso}>
-          Sign in
+          Try again
         </button>
       </>
+    ) : (
+      <p className="bsa-sub">Signing you in…</p>
     );
   }
 
