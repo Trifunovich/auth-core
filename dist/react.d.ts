@@ -9,6 +9,8 @@ export interface AuthContextValue {
     ssoConfigured: boolean;
     /** Runtime config resolved — gates the login screen so it doesn't flash the legacy form. */
     authReady: boolean;
+    /** Login mode: 'crimsonraven' (CR only) or 'legacy' (the app's password form only, env break-glass). */
+    authMode: 'crimsonraven' | 'legacy';
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string) => Promise<void>;
     loginWithSSO: () => Promise<void>;
@@ -21,4 +23,6 @@ export declare function AuthProvider({ children }: {
 }): import("react").JSX.Element;
 export declare function useAuth(): AuthContextValue;
 export { SSO_BLOCKED_KEY };
+export { AuthScreen } from './AuthScreen';
+export type { AuthScreenProps, AuthScreenCopy } from './AuthScreen';
 //# sourceMappingURL=react.d.ts.map

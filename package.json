@@ -1,6 +1,6 @@
 {
   "name": "@bearsoft/auth-core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Framework-agnostic CrimsonRaven SSO engine (oidc-client-ts) with React + Angular adapters.",
   "license": "MIT",
   "type": "module",
@@ -13,14 +13,15 @@
     "./react": {
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js"
-    }
+    },
+    "./auth.css": "./dist/auth.css"
   },
   "files": [
     "dist",
     "src"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && cp src/auth.css dist/auth.css",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },

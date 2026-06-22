@@ -19,6 +19,8 @@ export interface AuthState {
     ssoConfigured: boolean;
     /** Runtime config resolved — gates the login screen so it doesn't flash the legacy form. */
     ready: boolean;
+    /** 'crimsonraven' (default) → CR only; 'legacy' → the app's password form only (env break-glass). */
+    authMode: 'crimsonraven' | 'legacy';
 }
 export interface AuthClientOptions {
 }

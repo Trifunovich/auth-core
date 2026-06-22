@@ -27,6 +27,8 @@ export interface AuthState {
   ssoConfigured: boolean;
   /** Runtime config resolved — gates the login screen so it doesn't flash the legacy form. */
   ready: boolean;
+  /** 'crimsonraven' (default) → CR only; 'legacy' → the app's password form only (env break-glass). */
+  authMode: 'crimsonraven' | 'legacy';
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -55,6 +57,7 @@ export class AuthClient {
       ssoOnline: false,
       ssoConfigured: false,
       ready: false,
+      authMode: 'crimsonraven',
     };
   }
 
@@ -85,6 +88,7 @@ export class AuthClient {
       ssoConfigured: !!cfg.oidcEnabled,
       ssoOnline: !!(cfg.oidcEnabled && cfg.oidcOnline),
       ready: true,
+      authMode: cfg.authMode === 'legacy' ? 'legacy' : 'crimsonraven',
     });
     if (!cfg.oidcEnabled) return;
     const mgr = await getUserManager();

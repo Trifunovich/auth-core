@@ -14,6 +14,9 @@ export interface RuntimeConfig {
   oidcClientId?: string;
   oidcLogoUrl?: string;     // CrimsonRaven's current logo (light), scraped from its login page
   oidcLogoUrlDark?: string; // ...and the dark variant
+  /** Login mode. 'crimsonraven' (default) → CR only. 'legacy' → the app's email/password form only
+   *  (a manual break-glass for CR maintenance, env-driven on the backend). Never both at once. */
+  authMode?: 'crimsonraven' | 'legacy';
 }
 
 let configPromise: Promise<RuntimeConfig> | null = null;

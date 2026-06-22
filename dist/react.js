@@ -22,6 +22,7 @@ export function AuthProvider({ children }) {
         ssoOnline: state.ssoOnline,
         ssoConfigured: state.ssoConfigured,
         authReady: state.ready,
+        authMode: state.authMode,
         // Methods are bound arrow-props on the client, so these references are stable across renders.
         login: client.login,
         register: client.register,
@@ -39,4 +40,7 @@ export function useAuth() {
     return ctx;
 }
 export { SSO_BLOCKED_KEY };
+// The standardized screen lives in its own module; re-export here so consumers get it from
+// `@bearsoft/auth-core/react`. (Declared after AuthProvider/useAuth so the cycle resolves cleanly.)
+export { AuthScreen } from './AuthScreen';
 //# sourceMappingURL=react.js.map

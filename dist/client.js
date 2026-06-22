@@ -129,6 +129,7 @@ export class AuthClient {
             ssoOnline: false,
             ssoConfigured: false,
             ready: false,
+            authMode: 'crimsonraven',
         };
     }
     get state() {
@@ -157,6 +158,7 @@ export class AuthClient {
             ssoConfigured: !!cfg.oidcEnabled,
             ssoOnline: !!(cfg.oidcEnabled && cfg.oidcOnline),
             ready: true,
+            authMode: cfg.authMode === 'legacy' ? 'legacy' : 'crimsonraven',
         });
         if (!cfg.oidcEnabled)
             return;

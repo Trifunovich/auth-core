@@ -13,6 +13,8 @@ export interface AuthContextValue {
   ssoConfigured: boolean;
   /** Runtime config resolved — gates the login screen so it doesn't flash the legacy form. */
   authReady: boolean;
+  /** Login mode: 'crimsonraven' (CR only) or 'legacy' (the app's password form only, env break-glass). */
+  authMode: 'crimsonraven' | 'legacy';
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   loginWithSSO: () => Promise<void>;
@@ -41,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ssoOnline: state.ssoOnline,
     ssoConfigured: state.ssoConfigured,
     authReady: state.ready,
+    authMode: state.authMode,
     // Methods are bound arrow-props on the client, so these references are stable across renders.
     login: client.login,
     register: client.register,
@@ -60,3 +63,8 @@ export function useAuth(): AuthContextValue {
 }
 
 export { SSO_BLOCKED_KEY };
+
+// The standardized screen lives in its own module; re-export here so consumers get it from
+// `@bearsoft/auth-core/react`. (Declared after AuthProvider/useAuth so the cycle resolves cleanly.)
+export { AuthScreen } from './AuthScreen';
+export type { AuthScreenProps, AuthScreenCopy } from './AuthScreen';
