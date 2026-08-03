@@ -5,7 +5,7 @@
 // resend and forgot-password pages itself — so this engine only does the OIDC redirect/callback,
 // token storage + silent renew, and the optional legacy (break-glass) password login. The old
 // unverified-email "hold" + "resend" machinery is gone (Keycloak owns verification).
-import { getUserManager, loadRuntimeConfig } from './config.js';
+import { getUserManager, loadRuntimeConfig, refreshRuntimeConfig } from './config.js';
 /** Pull the API's `{ error }` message out of a failed response, falling back to a default. */
 async function errorMessage(res, fallback) {
     try {
@@ -20,6 +20,15 @@ export class AuthClient {
     constructor(_options = {}) {
         this.listeners = new Set();
         this.initialized = false;
+        /**
+         * Re-fetch runtime config (bypassing the cache) and re-apply SSO availability. Adapters call this
+         * when the network recovers or the tab regains focus, so a user who loaded during a flaky moment
+         * (a transient `oidcEnabled:false`) isn't stranded on the legacy password form once CrimsonRaven
+         * is reachable again.
+         */
+        this.recheckConfig = async () => {
+            this.applyConfig(await refreshRuntimeConfig());
+        };
         this.login = async (email, password) => {
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
@@ -127,12 +136,7 @@ export class AuthClient {
             return;
         this.initialized = true;
         const cfg = await loadRuntimeConfig();
-        this.set({
-            ssoConfigured: !!cfg.oidcEnabled,
-            ssoOnline: !!(cfg.oidcEnabled && cfg.oidcOnline),
-            ready: true,
-            authMode: cfg.authMode === 'legacy' ? 'legacy' : 'crimsonraven',
-        });
+        this.applyConfig(cfg);
         if (!cfg.oidcEnabled)
             return;
         const mgr = await getUserManager();
@@ -154,10 +158,28 @@ export class AuthClient {
                     this.set({ token: u.access_token });
                 }
             }
-            catch {
-                /* no valid session to silently restore — stay on the persisted/expired state */
+            catch (e) {
+                // A permanently-dead refresh token (invalid_grant) means the persisted session is a zombie:
+                // a signed-in shell holding a bearer the API will 401. Clear it so the UI shows logged-out
+                // now, rather than flashing signed-in until the first request self-heals. Any other error
+                // (offline, IdP briefly unreachable) is transient — keep the persisted state and let the
+                // automatic renew retry.
+                if (e?.error === 'invalid_grant') {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    this.set({ user: null, token: null });
+                }
             }
         }
+    }
+    /** Mirror resolved runtime config into SSO-availability state (shared by init + recheckConfig). */
+    applyConfig(cfg) {
+        this.set({
+            ssoConfigured: !!cfg.oidcEnabled,
+            ssoOnline: !!(cfg.oidcEnabled && cfg.oidcOnline),
+            ready: true,
+            authMode: cfg.authMode === 'legacy' ? 'legacy' : 'crimsonraven',
+        });
     }
     setSession(token, user) {
         localStorage.setItem('token', token);

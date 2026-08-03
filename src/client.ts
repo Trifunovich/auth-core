@@ -5,7 +5,7 @@
 // resend and forgot-password pages itself — so this engine only does the OIDC redirect/callback,
 // token storage + silent renew, and the optional legacy (break-glass) password login. The old
 // unverified-email "hold" + "resend" machinery is gone (Keycloak owns verification).
-import { getUserManager, loadRuntimeConfig } from './config.js';
+import { getUserManager, loadRuntimeConfig, refreshRuntimeConfig, type RuntimeConfig } from './config.js';
 
 export interface AuthUser {
   id: string;
@@ -81,12 +81,7 @@ export class AuthClient {
     if (this.initialized) return;
     this.initialized = true;
     const cfg = await loadRuntimeConfig();
-    this.set({
-      ssoConfigured: !!cfg.oidcEnabled,
-      ssoOnline: !!(cfg.oidcEnabled && cfg.oidcOnline),
-      ready: true,
-      authMode: cfg.authMode === 'legacy' ? 'legacy' : 'crimsonraven',
-    });
+    this.applyConfig(cfg);
     if (!cfg.oidcEnabled) return;
     const mgr = await getUserManager();
     if (!mgr) return;
@@ -105,11 +100,40 @@ export class AuthClient {
           localStorage.setItem('token', u.access_token);
           this.set({ token: u.access_token });
         }
-      } catch {
-        /* no valid session to silently restore — stay on the persisted/expired state */
+      } catch (e) {
+        // A permanently-dead refresh token (invalid_grant) means the persisted session is a zombie:
+        // a signed-in shell holding a bearer the API will 401. Clear it so the UI shows logged-out
+        // now, rather than flashing signed-in until the first request self-heals. Any other error
+        // (offline, IdP briefly unreachable) is transient — keep the persisted state and let the
+        // automatic renew retry.
+        if ((e as { error?: string })?.error === 'invalid_grant') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          this.set({ user: null, token: null });
+        }
       }
     }
   }
+
+  /** Mirror resolved runtime config into SSO-availability state (shared by init + recheckConfig). */
+  private applyConfig(cfg: RuntimeConfig): void {
+    this.set({
+      ssoConfigured: !!cfg.oidcEnabled,
+      ssoOnline: !!(cfg.oidcEnabled && cfg.oidcOnline),
+      ready: true,
+      authMode: cfg.authMode === 'legacy' ? 'legacy' : 'crimsonraven',
+    });
+  }
+
+  /**
+   * Re-fetch runtime config (bypassing the cache) and re-apply SSO availability. Adapters call this
+   * when the network recovers or the tab regains focus, so a user who loaded during a flaky moment
+   * (a transient `oidcEnabled:false`) isn't stranded on the legacy password form once CrimsonRaven
+   * is reachable again.
+   */
+  recheckConfig = async (): Promise<void> => {
+    this.applyConfig(await refreshRuntimeConfig());
+  };
 
   private setSession(token: string, user: AuthUser): void {
     localStorage.setItem('token', token);

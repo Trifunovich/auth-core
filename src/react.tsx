@@ -33,7 +33,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = client.subscribe(setState);
     void client.init();
-    return unsubscribe;
+    // Re-check SSO availability when the network recovers or the tab regains focus: a user who
+    // loaded during a flaky moment may have a transient "offline"/"disabled" config that would
+    // otherwise strand them on the legacy form. refreshRuntimeConfig (inside recheckConfig)
+    // bypasses the cache; a successful re-read replaces it.
+    const recheck = (): void => void client.recheckConfig();
+    const onVisible = (): void => {
+      if (document.visibilityState === 'visible') recheck();
+    };
+    window.addEventListener('online', recheck);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('online', recheck);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [client]);
 
   const value: AuthContextValue = {

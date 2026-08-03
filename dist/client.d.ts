@@ -33,6 +33,15 @@ export declare class AuthClient {
      * (ssoOnline). Idempotent — safe under React StrictMode's double-invoke.
      */
     init(): Promise<void>;
+    /** Mirror resolved runtime config into SSO-availability state (shared by init + recheckConfig). */
+    private applyConfig;
+    /**
+     * Re-fetch runtime config (bypassing the cache) and re-apply SSO availability. Adapters call this
+     * when the network recovers or the tab regains focus, so a user who loaded during a flaky moment
+     * (a transient `oidcEnabled:false`) isn't stranded on the legacy password form once CrimsonRaven
+     * is reachable again.
+     */
+    recheckConfig: () => Promise<void>;
     private setSession;
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string) => Promise<void>;
