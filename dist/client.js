@@ -68,7 +68,10 @@ export class AuthClient {
                 throw new Error(await errorMessage(res, 'Could not establish your session.'));
             }
             const data = await res.json();
-            this.setSession(accessToken, { id: data.userId, email: data.email });
+            const name = oidcUser.profile.given_name ||
+                oidcUser.profile.name ||
+                undefined;
+            this.setSession(accessToken, { id: data.userId, email: data.email, name });
         };
         this.logout = async () => {
             const mgr = await getUserManager();

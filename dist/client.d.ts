@@ -1,6 +1,8 @@
 export interface AuthUser {
     id: string;
     email: string;
+    /** Display name from the IdP profile (given_name), when available. */
+    name?: string;
 }
 /** The reactive snapshot the adapters expose. */
 export interface AuthState {

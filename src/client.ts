@@ -10,6 +10,8 @@ import { getUserManager, loadRuntimeConfig } from './config.js';
 export interface AuthUser {
   id: string;
   email: string;
+  /** Display name from the IdP profile (given_name), when available. */
+  name?: string;
 }
 
 /** The reactive snapshot the adapters expose. */
@@ -162,7 +164,11 @@ export class AuthClient {
       throw new Error(await errorMessage(res, 'Could not establish your session.'));
     }
     const data = await res.json();
-    this.setSession(accessToken, { id: data.userId, email: data.email });
+    const name =
+      (oidcUser.profile.given_name as string | undefined) ||
+      (oidcUser.profile.name as string | undefined) ||
+      undefined;
+    this.setSession(accessToken, { id: data.userId, email: data.email, name });
   };
 
   logout = async (): Promise<void> => {
