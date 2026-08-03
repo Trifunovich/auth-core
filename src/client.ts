@@ -107,6 +107,8 @@ export class AuthClient {
         // (offline, IdP briefly unreachable) is transient — keep the persisted state and let the
         // automatic renew retry.
         if ((e as { error?: string })?.error === 'invalid_grant') {
+          void mgr.removeUser(); // drop the dead user from the oidc store too, else every future
+          // load re-runs this doomed refresh grant (an IdP 400 round trip) before the login redirect.
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           this.set({ user: null, token: null });

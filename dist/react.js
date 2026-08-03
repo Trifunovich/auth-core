@@ -18,7 +18,11 @@ export function AuthProvider({ children }) {
         // loaded during a flaky moment may have a transient "offline"/"disabled" config that would
         // otherwise strand them on the legacy form. refreshRuntimeConfig (inside recheckConfig)
         // bypasses the cache; a successful re-read replaces it.
-        const recheck = () => void client.recheckConfig();
+        const recheck = () => {
+            if (client.state.token)
+                return; // already signed in — no need to re-probe SSO availability
+            void client.recheckConfig();
+        };
         const onVisible = () => {
             if (document.visibilityState === 'visible')
                 recheck();
