@@ -133,10 +133,28 @@ export class AuthClient {
         if (!cfg.oidcEnabled)
             return;
         const mgr = await getUserManager();
-        mgr?.events.addUserLoaded((u) => {
+        if (!mgr)
+            return;
+        mgr.events.addUserLoaded((u) => {
             localStorage.setItem('token', u.access_token);
             this.set({ token: u.access_token });
         });
+        // Restore + renew the OIDC session on load via the refresh token (offline_access), so a
+        // page refresh keeps you signed in and cross-app SSO doesn't rely on the iframe silent-renew
+        // that Firefox's cookie protection blocks. Skip the /auth/callback route (the code exchange
+        // there establishes the session); a missing/expired session just leaves you logged out.
+        if (window.location.pathname !== '/auth/callback') {
+            try {
+                const u = await mgr.signinSilent();
+                if (u) {
+                    localStorage.setItem('token', u.access_token);
+                    this.set({ token: u.access_token });
+                }
+            }
+            catch {
+                /* no valid session to silently restore — stay on the persisted/expired state */
+            }
+        }
     }
     setSession(token, user) {
         localStorage.setItem('token', token);
