@@ -126,6 +126,10 @@ export class AuthClient {
           this.set({ user: null, token: null, needsInteractiveLogin: true });
         }
       }
+      // A renewed token but no `user` object is a desynced session (e.g. an earlier /api/auth/me
+      // failure cleared `user` but left the refresh token): show the Sign-in button so an interactive
+      // login rebuilds the session, rather than stranding the app on a forever "Signing you in…".
+      if (!this._state.user) this.set({ needsInteractiveLogin: true });
       return;
     }
 
@@ -134,7 +138,7 @@ export class AuthClient {
     // with a code and logs you in — with no password and, crucially, without ever parking on
     // Keycloak's interactive login form. That parked form is what looped "restart login cookie not
     // found" across tabs. No session → Keycloak returns login_required and we show the Sign-in button.
-    if (this._state.ssoConfigured && !sessionStorage.getItem(SILENT_TRIED_KEY)) {
+    if (this._state.ssoOnline && this._state.authMode !== 'legacy' && !sessionStorage.getItem(SILENT_TRIED_KEY)) {
       sessionStorage.setItem(SILENT_TRIED_KEY, '1');
       try {
         await mgr.signinRedirect({ prompt: 'none' });

@@ -61,6 +61,16 @@ describe('AuthClient', () => {
     expect(c.state.token).toBe('renewed');
   });
 
+  it('init() shows the Sign-in button when a renewed token has no user (desynced session)', async () => {
+    h.manager.getUser = vi.fn(async () => ({ refresh_token: 'rt' }));
+    h.manager.signinSilent = vi.fn(async () => ({ access_token: 'renewed' }));
+    const c = new AuthClient(); // no localStorage 'user'
+    await c.init();
+    expect(c.state.token).toBe('renewed');
+    expect(c.state.user).toBeNull();
+    expect(c.state.needsInteractiveLogin).toBe(true);
+  });
+
   it('init() does NOT probe on the /auth/callback route (the code exchange owns it)', async () => {
     window.history.pushState({}, '', '/auth/callback');
     const c = new AuthClient();
