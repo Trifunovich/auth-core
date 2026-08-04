@@ -26,7 +26,18 @@ export interface AuthState {
   ready: boolean;
   /** 'crimsonraven' (default) → CR only; 'legacy' → the app's password form only (env break-glass). */
   authMode: 'crimsonraven' | 'legacy';
+  /**
+   * The on-load silent SSO probe (prompt=none) has finished and found NO CrimsonRaven session, so the
+   * login screen must show an explicit "Sign in" button instead of auto-redirecting. Auto-redirecting
+   * to Keycloak's interactive login form is what caused the multi-tab "restart login cookie" loop
+   * (an abandoned form races the one KC_RESTART cookie the browser keeps per realm).
+   */
+  needsInteractiveLogin: boolean;
 }
+
+/** Per-tab guard so the silent (prompt=none) SSO probe runs at most once — a `login_required` return
+ *  must not bounce back to CrimsonRaven again (that would be the very loop we're removing). */
+const SILENT_TRIED_KEY = 'cr_silent_tried';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface AuthClientOptions {}
@@ -55,6 +66,7 @@ export class AuthClient {
       ssoConfigured: false,
       ready: false,
       authMode: 'crimsonraven',
+      needsInteractiveLogin: false,
     };
   }
 
@@ -89,11 +101,14 @@ export class AuthClient {
       localStorage.setItem('token', u.access_token);
       this.set({ token: u.access_token });
     });
-    // Restore + renew the OIDC session on load via the refresh token (offline_access), so a
-    // page refresh keeps you signed in and cross-app SSO doesn't rely on the iframe silent-renew
-    // that Firefox's cookie protection blocks. Skip the /auth/callback route (the code exchange
-    // there establishes the session); a missing/expired session just leaves you logged out.
-    if (window.location.pathname !== '/auth/callback') {
+    // The /auth/callback route owns the code (or login_required) exchange — don't probe here.
+    if (window.location.pathname === '/auth/callback') return;
+
+    // Already have a local OIDC session? Renew it via the refresh token (offline_access). This is a
+    // plain token-endpoint XHR — no iframe, no third-party cookie — so a page refresh keeps you
+    // signed in even under Firefox's cookie partitioning.
+    const stored = await mgr.getUser().catch(() => null);
+    if (stored?.refresh_token) {
       try {
         const u = await mgr.signinSilent();
         if (u) {
@@ -103,18 +118,32 @@ export class AuthClient {
       } catch (e) {
         // A permanently-dead refresh token (invalid_grant) means the persisted session is a zombie:
         // a signed-in shell holding a bearer the API will 401. Clear it so the UI shows logged-out
-        // now, rather than flashing signed-in until the first request self-heals. Any other error
-        // (offline, IdP briefly unreachable) is transient — keep the persisted state and let the
-        // automatic renew retry.
+        // now. Any other error (offline, IdP briefly unreachable) is transient — keep the session.
         if ((e as { error?: string })?.error === 'invalid_grant') {
-          void mgr.removeUser(); // drop the dead user from the oidc store too, else every future
-          // load re-runs this doomed refresh grant (an IdP 400 round trip) before the login redirect.
+          void mgr.removeUser();
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-          this.set({ user: null, token: null });
+          this.set({ user: null, token: null, needsInteractiveLogin: true });
         }
       }
+      return;
     }
+
+    // No local session: attempt cross-app SSO SILENTLY via a top-level prompt=none redirect, ONCE
+    // per tab. If CrimsonRaven has a session (you signed into another app) this comes straight back
+    // with a code and logs you in — with no password and, crucially, without ever parking on
+    // Keycloak's interactive login form. That parked form is what looped "restart login cookie not
+    // found" across tabs. No session → Keycloak returns login_required and we show the Sign-in button.
+    if (this._state.ssoConfigured && !sessionStorage.getItem(SILENT_TRIED_KEY)) {
+      sessionStorage.setItem(SILENT_TRIED_KEY, '1');
+      try {
+        await mgr.signinRedirect({ prompt: 'none' });
+        return; // navigating to CrimsonRaven now
+      } catch {
+        // couldn't even start the redirect (SSO offline/misconfigured) — fall through to the button
+      }
+    }
+    this.set({ needsInteractiveLogin: this._state.ssoConfigured });
   }
 
   /** Mirror resolved runtime config into SSO-availability state (shared by init + recheckConfig). */
@@ -140,7 +169,7 @@ export class AuthClient {
   private setSession(token: string, user: AuthUser): void {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
-    this.set({ user, token });
+    this.set({ user, token, needsInteractiveLogin: false });
   }
 
   login = async (email: string, password: string): Promise<void> => {
@@ -179,7 +208,21 @@ export class AuthClient {
   completeSsoCallback = async (): Promise<void> => {
     const mgr = await getUserManager();
     if (!mgr) throw new Error('SSO is not configured.');
-    const oidcUser = await mgr.signinRedirectCallback();
+    let oidcUser;
+    try {
+      oidcUser = await mgr.signinRedirectCallback();
+    } catch (e) {
+      // A prompt=none probe against a signed-out CrimsonRaven comes back here as login_required
+      // (or interaction/consent_required). That's the expected "no session" answer, not a failure:
+      // show the Sign-in button rather than an error, and don't re-probe.
+      const err = (e as { error?: string })?.error;
+      if (err === 'login_required' || err === 'interaction_required' || err === 'consent_required') {
+        sessionStorage.setItem(SILENT_TRIED_KEY, '1');
+        this.set({ needsInteractiveLogin: true });
+        return;
+      }
+      throw e;
+    }
     const accessToken = oidcUser.access_token;
     localStorage.setItem('token', accessToken); // so requests attach it on /me
     this.set({ token: accessToken });
@@ -204,6 +247,7 @@ export class AuthClient {
     // logged-out (a fresh client seeds user/token from these on construction).
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    sessionStorage.removeItem(SILENT_TRIED_KEY); // let the next load silently re-probe CrimsonRaven
     if (mgr && oidcUser) {
       // End the CrimsonRaven session and leave the page. Do NOT clear in-app state first: that
       // remounts the login screen, whose Raven-first effect fires signinRedirect and races (and

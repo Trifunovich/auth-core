@@ -15,6 +15,8 @@ export interface AuthContextValue {
   authReady: boolean;
   /** Login mode: 'crimsonraven' (CR only) or 'legacy' (the app's password form only, env break-glass). */
   authMode: 'crimsonraven' | 'legacy';
+  /** Silent (prompt=none) SSO probe finished with no session → show a "Sign in" button, don't auto-redirect. */
+  needsInteractiveLogin: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   loginWithSSO: () => Promise<void>;
@@ -60,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ssoConfigured: state.ssoConfigured,
     authReady: state.ready,
     authMode: state.authMode,
+    needsInteractiveLogin: state.needsInteractiveLogin,
     // Methods are bound arrow-props on the client, so these references are stable across renders.
     login: client.login,
     register: client.register,

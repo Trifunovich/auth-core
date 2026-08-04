@@ -42,6 +42,7 @@ export function AuthProvider({ children }) {
         ssoConfigured: state.ssoConfigured,
         authReady: state.ready,
         authMode: state.authMode,
+        needsInteractiveLogin: state.needsInteractiveLogin,
         // Methods are bound arrow-props on the client, so these references are stable across renders.
         login: client.login,
         register: client.register,

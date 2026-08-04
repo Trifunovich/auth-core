@@ -2,7 +2,7 @@
 // login / registration / verify-email / forgot-password pages) and shows a "Signing you in…" spinner;
 // on failure it offers a retry plus a clean "log out and start over". In legacy (break-glass) mode it
 // renders the app's own password form. Theme the small spinner/card via '@bearsoft/auth-core/auth.css'.
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { useAuth } from './react.js';
 
 export interface AuthScreenProps {
@@ -18,7 +18,7 @@ function message(e: unknown): string {
 }
 
 export function AuthScreen({ legacy }: AuthScreenProps) {
-  const { ssoConfigured, authMode, authReady, loginWithSSO, logout } = useAuth();
+  const { ssoConfigured, authMode, authReady, needsInteractiveLogin, loginWithSSO, logout } = useAuth();
   const [error, setError] = useState('');
 
   const legacyMode = authMode === 'legacy' || !ssoConfigured;
@@ -28,13 +28,10 @@ export function AuthScreen({ legacy }: AuthScreenProps) {
     loginWithSSO().catch((e) => setError(message(e)));
   };
 
-  // CR mode: bounce straight to CrimsonRaven (Keycloak) — no manual "Sign in" gate. Keycloak owns the
-  // login UI, so the app screen is only ever a transient spinner (or the failure fallback below).
-  useEffect(() => {
-    if (!authReady || legacyMode) return;
-    loginWithSSO().catch((e) => setError(message(e)));
-  }, [authReady, legacyMode, loginWithSSO]);
-
+  // CR mode: the engine already tried a SILENT (prompt=none) SSO on load. If that found a session
+  // you're in and never see this screen; if not (needsInteractiveLogin) we show one explicit
+  // "Sign in" button. We deliberately do NOT auto-fire the interactive redirect — auto-parking on
+  // Keycloak's login form is what looped "restart login cookie" across tabs.
   function body(): ReactNode {
     if (!authReady) return <p className="bsa-sub">Loading…</p>;
     if (legacyMode) return legacy ?? <BasicSignIn />;
@@ -49,6 +46,13 @@ export function AuthScreen({ legacy }: AuthScreenProps) {
             Log out and start over
           </button>
         </>
+      );
+    }
+    if (needsInteractiveLogin) {
+      return (
+        <button className="bsa-btn" onClick={startSso}>
+          Sign in with CrimsonRaven
+        </button>
       );
     }
     return <p className="bsa-sub">Signing you in…</p>;

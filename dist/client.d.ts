@@ -16,6 +16,13 @@ export interface AuthState {
     ready: boolean;
     /** 'crimsonraven' (default) → CR only; 'legacy' → the app's password form only (env break-glass). */
     authMode: 'crimsonraven' | 'legacy';
+    /**
+     * The on-load silent SSO probe (prompt=none) has finished and found NO CrimsonRaven session, so the
+     * login screen must show an explicit "Sign in" button instead of auto-redirecting. Auto-redirecting
+     * to Keycloak's interactive login form is what caused the multi-tab "restart login cookie" loop
+     * (an abandoned form races the one KC_RESTART cookie the browser keeps per realm).
+     */
+    needsInteractiveLogin: boolean;
 }
 export interface AuthClientOptions {
 }
