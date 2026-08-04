@@ -1,61 +1,102 @@
 /*
- * Shared auth-screen styles for @bearsoft/auth-core. Post-Keycloak the app screen is only a transient
- * "Signing you in…" spinner (CrimsonRaven hosts the real, themed login UI) or the legacy break-glass
- * form — so this is a small centered card, not a full branded layout. Colors come from CSS custom
- * properties; an app themes it by setting --auth-* on :root or a wrapper.
+ * Shared CrimsonRaven sign-in card for @bearsoft/auth-core — the SAME screen in every OfBirds app, so
+ * only the wordmark and accent colour change per app. Based on the MulberryHeron look: a soft ground
+ * with a centered surface card. Colours come from CSS custom properties; an app themes it by setting
+ * --auth-* on :root or a wrapper.
  *
  * Theme contract (override on :root or a wrapper):
- *   --auth-accent       primary button background
+ *   --auth-accent       primary button + wordmark colour
  *   --auth-accent-fg    primary button text
- *   --auth-bg           background
+ *   --auth-ground       page background (behind the card)
+ *   --auth-surface      card background
  *   --auth-fg           text
  *   --auth-muted        secondary text / notes
  *   --auth-border       input/borders
  *   --auth-error        error text
- *   --auth-radius       corner radius
+ *   --auth-radius       card corner radius
  */
 /* Var DEFAULTS go in :where() (zero specificity) so an app's own `.bsa-screen { --auth-*: ... }`
  * always wins regardless of stylesheet load order. */
 :where(.bsa-screen) {
-  --auth-accent: #4f46e5;
+  --auth-accent: #6e2c91;
   --auth-accent-fg: #ffffff;
-  --auth-bg: #ffffff;
-  --auth-fg: #111827;
-  --auth-muted: #6b7280;
-  --auth-border: #d1d5db;
+  --auth-ground: #f3f0f8;
+  --auth-surface: #ffffff;
+  --auth-fg: #211b27;
+  --auth-muted: #6b6577;
+  --auth-border: #e2dced;
   --auth-error: #dc2626;
-  --auth-radius: 12px;
+  --auth-radius: 16px;
 }
 
 .bsa-screen {
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
   width: 100%;
   padding: 2rem 1.5rem;
+  box-sizing: border-box;
   font-family: inherit;
   color: var(--auth-fg);
-  background: var(--auth-bg);
+  background: var(--auth-ground);
 }
 
-.bsa-card { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 0.85rem; text-align: center; }
-.bsa-card h2 { margin: 0 0 0.25rem; font-size: 1.3rem; font-weight: 600; }
-.bsa-sub { margin: 0; color: var(--auth-muted); font-size: 0.95rem; }
-.bsa-form { display: flex; flex-direction: column; gap: 0.85rem; text-align: left; }
+.bsa-card {
+  width: 100%;
+  max-width: 380px;
+  box-sizing: border-box;
+  padding: 2.75rem 2.25rem;
+  background: var(--auth-surface);
+  border-radius: var(--auth-radius);
+  box-shadow: 0 12px 40px rgba(17, 12, 24, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  text-align: center;
+}
+
+.bsa-brand {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--auth-accent);
+}
+
+.bsa-card h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.bsa-sub {
+  margin: 0;
+  color: var(--auth-muted);
+  font-size: 0.95rem;
+}
+
+.bsa-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  text-align: left;
+}
 
 .bsa-btn {
   appearance: none;
   border: none;
-  border-radius: var(--auth-radius);
-  padding: 0.7rem 1rem;
-  font-size: 0.95rem;
+  width: 100%;
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font-size: 0.98rem;
   font-weight: 600;
   cursor: pointer;
   background: var(--auth-accent);
   color: var(--auth-accent-fg);
+  transition: filter 0.15s ease;
 }
+.bsa-btn:hover { filter: brightness(1.06); }
 .bsa-btn:disabled { opacity: 0.6; cursor: default; }
 
 .bsa-link {
@@ -63,8 +104,9 @@
   background: none;
   border: none;
   padding: 0;
-  color: var(--auth-accent);
+  color: var(--auth-muted);
   font: inherit;
+  font-size: 0.88rem;
   cursor: pointer;
   text-decoration: underline;
 }
@@ -74,10 +116,10 @@
 .bsa-field input {
   padding: 0.6rem 0.7rem;
   border: 1px solid var(--auth-border);
-  border-radius: var(--auth-radius);
+  border-radius: 10px;
   font-size: 0.95rem;
-  background: var(--auth-bg);
+  background: var(--auth-surface);
   color: var(--auth-fg);
 }
 
-.bsa-error { color: var(--auth-error); font-size: 0.88rem; }
+.bsa-error { color: var(--auth-error); font-size: 0.88rem; margin: 0; }

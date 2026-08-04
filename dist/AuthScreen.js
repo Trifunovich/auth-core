@@ -1,39 +1,20 @@
-import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
-// Minimal auth screen. In CrimsonRaven mode it just bounces to Keycloak (which hosts the themed
-// login / registration / verify-email / forgot-password pages) and shows a "Signing you in…" spinner;
-// on failure it offers a retry plus a clean "log out and start over". In legacy (break-glass) mode it
-// renders the app's own password form. Theme the small spinner/card via '@bearsoft/auth-core/auth.css'.
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+// Standardized auth screen. In CrimsonRaven mode it renders the shared SsoCard (identical across every
+// app; Keycloak hosts the real login/registration/verify/forgot pages). In legacy (break-glass) mode
+// it renders the app's own password form inside the same card shell. Theme via '@bearsoft/auth-core/auth.css'.
 import { useState } from 'react';
 import { useAuth } from './react.js';
-function message(e) {
-    return e instanceof Error ? e.message : 'Something went wrong.';
-}
-export function AuthScreen({ legacy }) {
-    const { ssoConfigured, authMode, authReady, needsInteractiveLogin, loginWithSSO, logout } = useAuth();
-    const [error, setError] = useState('');
+import { SsoCard } from './SsoCard.js';
+export function AuthScreen({ brand, legacy }) {
+    const { ssoConfigured, authMode, authReady } = useAuth();
     const legacyMode = authMode === 'legacy' || !ssoConfigured;
-    const startSso = () => {
-        setError('');
-        loginWithSSO().catch((e) => setError(message(e)));
-    };
-    // CR mode: the engine already tried a SILENT (prompt=none) SSO on load. If that found a session
-    // you're in and never see this screen; if not (needsInteractiveLogin) we show one explicit
-    // "Sign in" button. We deliberately do NOT auto-fire the interactive redirect — auto-parking on
-    // Keycloak's login form is what looped "restart login cookie" across tabs.
-    function body() {
-        if (!authReady)
-            return _jsx("p", { className: "bsa-sub", children: "Loading\u2026" });
-        if (legacyMode)
-            return legacy ?? _jsx(BasicSignIn, {});
-        if (error) {
-            return (_jsxs(_Fragment, { children: [_jsx("div", { className: "bsa-error", children: error }), _jsx("button", { className: "bsa-btn", onClick: startSso, children: "Try again" }), _jsx("button", { className: "bsa-link", onClick: () => void logout(), children: "Log out and start over" })] }));
-        }
-        if (needsInteractiveLogin) {
-            return (_jsx("button", { className: "bsa-btn", onClick: startSso, children: "Sign in with CrimsonRaven" }));
-        }
-        return _jsx("p", { className: "bsa-sub", children: "Signing you in\u2026" });
+    if (!authReady) {
+        return (_jsx("div", { className: "bsa-screen", children: _jsx("div", { className: "bsa-card", children: _jsx("p", { className: "bsa-sub", children: "Loading\u2026" }) }) }));
     }
-    return (_jsx("div", { className: "bsa-screen", children: _jsx("div", { className: "bsa-card", children: body() }) }));
+    if (legacyMode) {
+        return (_jsx("div", { className: "bsa-screen", children: _jsxs("div", { className: "bsa-card", children: [_jsx("h1", { className: "bsa-brand", children: brand }), legacy ?? _jsx(BasicSignIn, {})] }) }));
+    }
+    return _jsx(SsoCard, { brand: brand });
 }
 /** Minimal built-in legacy sign-in (email + password). Apps with register/forgot pass their own via
  *  the `legacy` slot; this is the break-glass default for maintenance mode. */
@@ -51,7 +32,7 @@ function BasicSignIn() {
             await login(email, password);
         }
         catch (err) {
-            setError(message(err));
+            setError(err instanceof Error ? err.message : 'Something went wrong.');
         }
         finally {
             setBusy(false);

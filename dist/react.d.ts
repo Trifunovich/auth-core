@@ -25,4 +25,6 @@ export declare function AuthProvider({ children }: {
 export declare function useAuth(): AuthContextValue;
 export { AuthScreen } from './AuthScreen.js';
 export type { AuthScreenProps } from './AuthScreen.js';
+export { SsoCard } from './SsoCard.js';
+export type { SsoCardProps } from './SsoCard.js';
 //# sourceMappingURL=react.d.ts.map

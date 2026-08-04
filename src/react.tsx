@@ -84,3 +84,5 @@ export function useAuth(): AuthContextValue {
 // `@bearsoft/auth-core/react`. (Declared after AuthProvider/useAuth so the cycle resolves cleanly.)
 export { AuthScreen } from './AuthScreen.js';
 export type { AuthScreenProps } from './AuthScreen.js';
+export { SsoCard } from './SsoCard.js';
+export type { SsoCardProps } from './SsoCard.js';

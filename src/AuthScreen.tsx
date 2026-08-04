@@ -1,11 +1,13 @@
-// Minimal auth screen. In CrimsonRaven mode it just bounces to Keycloak (which hosts the themed
-// login / registration / verify-email / forgot-password pages) and shows a "Signing you in…" spinner;
-// on failure it offers a retry plus a clean "log out and start over". In legacy (break-glass) mode it
-// renders the app's own password form. Theme the small spinner/card via '@bearsoft/auth-core/auth.css'.
+// Standardized auth screen. In CrimsonRaven mode it renders the shared SsoCard (identical across every
+// app; Keycloak hosts the real login/registration/verify/forgot pages). In legacy (break-glass) mode
+// it renders the app's own password form inside the same card shell. Theme via '@bearsoft/auth-core/auth.css'.
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useAuth } from './react.js';
+import { SsoCard } from './SsoCard.js';
 
 export interface AuthScreenProps {
+  /** App wordmark shown on the card (e.g. "Mulberry Heron"). */
+  brand: string;
   /**
    * App-specific legacy email/password form, shown only in legacy (maintenance) mode. If omitted, a
    * minimal built-in sign-in form is used as the break-glass default.
@@ -13,56 +15,32 @@ export interface AuthScreenProps {
   legacy?: ReactNode;
 }
 
-function message(e: unknown): string {
-  return e instanceof Error ? e.message : 'Something went wrong.';
-}
-
-export function AuthScreen({ legacy }: AuthScreenProps) {
-  const { ssoConfigured, authMode, authReady, needsInteractiveLogin, loginWithSSO, logout } = useAuth();
-  const [error, setError] = useState('');
-
+export function AuthScreen({ brand, legacy }: AuthScreenProps) {
+  const { ssoConfigured, authMode, authReady } = useAuth();
   const legacyMode = authMode === 'legacy' || !ssoConfigured;
 
-  const startSso = () => {
-    setError('');
-    loginWithSSO().catch((e) => setError(message(e)));
-  };
-
-  // CR mode: the engine already tried a SILENT (prompt=none) SSO on load. If that found a session
-  // you're in and never see this screen; if not (needsInteractiveLogin) we show one explicit
-  // "Sign in" button. We deliberately do NOT auto-fire the interactive redirect — auto-parking on
-  // Keycloak's login form is what looped "restart login cookie" across tabs.
-  function body(): ReactNode {
-    if (!authReady) return <p className="bsa-sub">Loading…</p>;
-    if (legacyMode) return legacy ?? <BasicSignIn />;
-    if (error) {
-      return (
-        <>
-          <div className="bsa-error">{error}</div>
-          <button className="bsa-btn" onClick={startSso}>
-            Try again
-          </button>
-          <button className="bsa-link" onClick={() => void logout()}>
-            Log out and start over
-          </button>
-        </>
-      );
-    }
-    if (needsInteractiveLogin) {
-      return (
-        <button className="bsa-btn" onClick={startSso}>
-          Sign in with CrimsonRaven
-        </button>
-      );
-    }
-    return <p className="bsa-sub">Signing you in…</p>;
+  if (!authReady) {
+    return (
+      <div className="bsa-screen">
+        <div className="bsa-card">
+          <p className="bsa-sub">Loading…</p>
+        </div>
+      </div>
+    );
   }
 
-  return (
-    <div className="bsa-screen">
-      <div className="bsa-card">{body()}</div>
-    </div>
-  );
+  if (legacyMode) {
+    return (
+      <div className="bsa-screen">
+        <div className="bsa-card">
+          <h1 className="bsa-brand">{brand}</h1>
+          {legacy ?? <BasicSignIn />}
+        </div>
+      </div>
+    );
+  }
+
+  return <SsoCard brand={brand} />;
 }
 
 /** Minimal built-in legacy sign-in (email + password). Apps with register/forgot pass their own via
@@ -81,7 +59,7 @@ function BasicSignIn() {
     try {
       await login(email, password);
     } catch (err) {
-      setError(message(err));
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       setBusy(false);
     }

@@ -61,4 +61,5 @@ export function useAuth() {
 // The standardized screen lives in its own module; re-export here so consumers get it from
 // `@bearsoft/auth-core/react`. (Declared after AuthProvider/useAuth so the cycle resolves cleanly.)
 export { AuthScreen } from './AuthScreen.js';
+export { SsoCard } from './SsoCard.js';
 //# sourceMappingURL=react.js.map
