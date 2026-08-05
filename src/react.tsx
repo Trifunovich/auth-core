@@ -15,6 +15,8 @@ export interface AuthContextValue {
   authReady: boolean;
   /** Login mode: 'crimsonraven' (CR only) or 'legacy' (the app's password form only, env break-glass). */
   authMode: 'crimsonraven' | 'legacy';
+  /** Silent (prompt=none) SSO probe finished with no session → show a "Sign in" button, don't auto-redirect. */
+  needsInteractiveLogin: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   loginWithSSO: () => Promise<void>;
@@ -33,7 +35,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = client.subscribe(setState);
     void client.init();
-    return unsubscribe;
+    // Re-check SSO availability when the network recovers or the tab regains focus: a user who
+    // loaded during a flaky moment may have a transient "offline"/"disabled" config that would
+    // otherwise strand them on the legacy form. refreshRuntimeConfig (inside recheckConfig)
+    // bypasses the cache; a successful re-read replaces it.
+    const recheck = (): void => {
+      if (client.state.token) return; // already signed in — no need to re-probe SSO availability
+      void client.recheckConfig();
+    };
+    const onVisible = (): void => {
+      if (document.visibilityState === 'visible') recheck();
+    };
+    window.addEventListener('online', recheck);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('online', recheck);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [client]);
 
   const value: AuthContextValue = {
@@ -43,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ssoConfigured: state.ssoConfigured,
     authReady: state.ready,
     authMode: state.authMode,
+    needsInteractiveLogin: state.needsInteractiveLogin,
     // Methods are bound arrow-props on the client, so these references are stable across renders.
     login: client.login,
     register: client.register,
@@ -64,3 +84,5 @@ export function useAuth(): AuthContextValue {
 // `@bearsoft/auth-core/react`. (Declared after AuthProvider/useAuth so the cycle resolves cleanly.)
 export { AuthScreen } from './AuthScreen.js';
 export type { AuthScreenProps } from './AuthScreen.js';
+export { SsoCard } from './SsoCard.js';
+export type { SsoCardProps } from './SsoCard.js';

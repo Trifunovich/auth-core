@@ -23,11 +23,14 @@ describe('AuthClient', () => {
     h.manager = {
       events: { addUserLoaded: vi.fn() },
       getUser: vi.fn(async () => null),
+      signinSilent: vi.fn(async () => null),
       signinRedirect: vi.fn(),
       signinRedirectCallback: vi.fn(),
       signoutRedirect: vi.fn(),
       removeUser: vi.fn(),
     } as never;
+    window.history.pushState({}, '', '/'); // not on the callback route by default
+    sessionStorage.clear();
   });
   afterEach(() => vi.unstubAllGlobals());
 
@@ -45,6 +48,89 @@ describe('AuthClient', () => {
     expect(c.state.ssoConfigured).toBe(true);
     expect(c.state.ssoOnline).toBe(true);
     expect(c.state.ready).toBe(true);
+  });
+
+  it('init() renews an existing session via the refresh-token grant (no interactive redirect)', async () => {
+    h.manager.getUser = vi.fn(async () => ({ refresh_token: 'rt' }));
+    h.manager.signinSilent = vi.fn(async () => ({ access_token: 'renewed' }));
+    const c = new AuthClient();
+    await c.init();
+    expect(h.manager.signinSilent).toHaveBeenCalledOnce();
+    expect(h.manager.signinRedirect).not.toHaveBeenCalled();
+    expect(localStorage.getItem('token')).toBe('renewed');
+    expect(c.state.token).toBe('renewed');
+  });
+
+  it('init() shows the Sign-in button when a renewed token has no user (desynced session)', async () => {
+    h.manager.getUser = vi.fn(async () => ({ refresh_token: 'rt' }));
+    h.manager.signinSilent = vi.fn(async () => ({ access_token: 'renewed' }));
+    const c = new AuthClient(); // no localStorage 'user'
+    await c.init();
+    expect(c.state.token).toBe('renewed');
+    expect(c.state.user).toBeNull();
+    expect(c.state.needsInteractiveLogin).toBe(true);
+  });
+
+  it('init() does NOT probe on the /auth/callback route (the code exchange owns it)', async () => {
+    window.history.pushState({}, '', '/auth/callback');
+    const c = new AuthClient();
+    await c.init();
+    expect(h.manager.signinSilent).not.toHaveBeenCalled();
+    expect(h.manager.signinRedirect).not.toHaveBeenCalled();
+  });
+
+  it('init() clears a zombie session when the refresh token is dead (invalid_grant)', async () => {
+    localStorage.setItem('token', 'stale');
+    localStorage.setItem('user', JSON.stringify({ id: 'u1', email: 'a@b.c' }));
+    h.manager.getUser = vi.fn(async () => ({ refresh_token: 'rt' }));
+    h.manager.signinSilent = vi.fn(async () => {
+      throw { error: 'invalid_grant' };
+    });
+    const c = new AuthClient();
+    await c.init();
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('user')).toBeNull();
+    expect(c.state.user).toBeNull();
+    expect(c.state.needsInteractiveLogin).toBe(true);
+  });
+
+  it('init() keeps the persisted session on a transient silent-renew failure (offline)', async () => {
+    localStorage.setItem('token', 'stale');
+    localStorage.setItem('user', JSON.stringify({ id: 'u1', email: 'a@b.c' }));
+    h.manager.getUser = vi.fn(async () => ({ refresh_token: 'rt' }));
+    h.manager.signinSilent = vi.fn(async () => {
+      throw new Error('network down');
+    });
+    const c = new AuthClient();
+    await c.init();
+    expect(localStorage.getItem('token')).toBe('stale');
+    expect(c.state.user).toEqual({ id: 'u1', email: 'a@b.c' });
+  });
+
+  it('init() with NO local session silently probes SSO via a top-level prompt=none redirect', async () => {
+    const c = new AuthClient();
+    await c.init(); // ssoConfigured true (cfg default), no stored user
+    expect(h.manager.signinRedirect).toHaveBeenCalledWith({ prompt: 'none' });
+    expect(sessionStorage.getItem('cr_silent_tried')).toBe('1');
+  });
+
+  it('init() does NOT re-probe once cr_silent_tried is set; shows the Sign-in button instead', async () => {
+    sessionStorage.setItem('cr_silent_tried', '1');
+    const c = new AuthClient();
+    await c.init();
+    expect(h.manager.signinRedirect).not.toHaveBeenCalled();
+    expect(c.state.needsInteractiveLogin).toBe(true);
+  });
+
+  it('completeSsoCallback() treats login_required (silent probe, no session) as show-the-button, not an error', async () => {
+    h.manager.signinRedirectCallback = vi.fn(async () => {
+      throw { error: 'login_required' };
+    });
+    const c = new AuthClient();
+    await expect(c.completeSsoCallback()).resolves.toBeUndefined();
+    expect(c.state.needsInteractiveLogin).toBe(true);
+    expect(c.state.user).toBeNull();
+    expect(sessionStorage.getItem('cr_silent_tried')).toBe('1');
   });
 
   it('login() stores the session and notifies subscribers', async () => {

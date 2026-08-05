@@ -11,6 +11,8 @@ export interface AuthContextValue {
     authReady: boolean;
     /** Login mode: 'crimsonraven' (CR only) or 'legacy' (the app's password form only, env break-glass). */
     authMode: 'crimsonraven' | 'legacy';
+    /** Silent (prompt=none) SSO probe finished with no session → show a "Sign in" button, don't auto-redirect. */
+    needsInteractiveLogin: boolean;
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string) => Promise<void>;
     loginWithSSO: () => Promise<void>;
@@ -23,4 +25,6 @@ export declare function AuthProvider({ children }: {
 export declare function useAuth(): AuthContextValue;
 export { AuthScreen } from './AuthScreen.js';
 export type { AuthScreenProps } from './AuthScreen.js';
+export { SsoCard } from './SsoCard.js';
+export type { SsoCardProps } from './SsoCard.js';
 //# sourceMappingURL=react.d.ts.map

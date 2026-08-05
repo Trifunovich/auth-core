@@ -14,7 +14,26 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         const unsubscribe = client.subscribe(setState);
         void client.init();
-        return unsubscribe;
+        // Re-check SSO availability when the network recovers or the tab regains focus: a user who
+        // loaded during a flaky moment may have a transient "offline"/"disabled" config that would
+        // otherwise strand them on the legacy form. refreshRuntimeConfig (inside recheckConfig)
+        // bypasses the cache; a successful re-read replaces it.
+        const recheck = () => {
+            if (client.state.token)
+                return; // already signed in — no need to re-probe SSO availability
+            void client.recheckConfig();
+        };
+        const onVisible = () => {
+            if (document.visibilityState === 'visible')
+                recheck();
+        };
+        window.addEventListener('online', recheck);
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            unsubscribe();
+            window.removeEventListener('online', recheck);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
     }, [client]);
     const value = {
         user: state.user,
@@ -23,6 +42,7 @@ export function AuthProvider({ children }) {
         ssoConfigured: state.ssoConfigured,
         authReady: state.ready,
         authMode: state.authMode,
+        needsInteractiveLogin: state.needsInteractiveLogin,
         // Methods are bound arrow-props on the client, so these references are stable across renders.
         login: client.login,
         register: client.register,
@@ -41,4 +61,5 @@ export function useAuth() {
 // The standardized screen lives in its own module; re-export here so consumers get it from
 // `@bearsoft/auth-core/react`. (Declared after AuthProvider/useAuth so the cycle resolves cleanly.)
 export { AuthScreen } from './AuthScreen.js';
+export { SsoCard } from './SsoCard.js';
 //# sourceMappingURL=react.js.map

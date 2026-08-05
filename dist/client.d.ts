@@ -1,6 +1,8 @@
 export interface AuthUser {
     id: string;
     email: string;
+    /** Display name from the IdP profile (given_name), when available. */
+    name?: string;
 }
 /** The reactive snapshot the adapters expose. */
 export interface AuthState {
@@ -14,6 +16,13 @@ export interface AuthState {
     ready: boolean;
     /** 'crimsonraven' (default) → CR only; 'legacy' → the app's password form only (env break-glass). */
     authMode: 'crimsonraven' | 'legacy';
+    /**
+     * The on-load silent SSO probe (prompt=none) has finished and found NO CrimsonRaven session, so the
+     * login screen must show an explicit "Sign in" button instead of auto-redirecting. Auto-redirecting
+     * to Keycloak's interactive login form is what caused the multi-tab "restart login cookie" loop
+     * (an abandoned form races the one KC_RESTART cookie the browser keeps per realm).
+     */
+    needsInteractiveLogin: boolean;
 }
 export interface AuthClientOptions {
 }
@@ -31,6 +40,15 @@ export declare class AuthClient {
      * (ssoOnline). Idempotent — safe under React StrictMode's double-invoke.
      */
     init(): Promise<void>;
+    /** Mirror resolved runtime config into SSO-availability state (shared by init + recheckConfig). */
+    private applyConfig;
+    /**
+     * Re-fetch runtime config (bypassing the cache) and re-apply SSO availability. Adapters call this
+     * when the network recovers or the tab regains focus, so a user who loaded during a flaky moment
+     * (a transient `oidcEnabled:false`) isn't stranded on the legacy password form once CrimsonRaven
+     * is reachable again.
+     */
+    recheckConfig: () => Promise<void>;
     private setSession;
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string) => Promise<void>;
